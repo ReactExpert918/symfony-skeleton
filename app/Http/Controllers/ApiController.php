@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiClientHelper;
 use App\Http\Requests\StoreAuthorRequest;
 use App\Http\Requests\StoreBookRequest;
 use DateTime;
@@ -17,9 +18,9 @@ class ApiController extends Controller
     {
         $data = $request->all();
 
-        $client = new Client();
+        $client = ApiClientHelper::get(false);
         try {
-            $response = $client->request('POST', 'https://symfony-skeleton.q-tests.com/api/v2/token', ['body' => json_encode($data)]);
+            $response = $client->request('POST', '/api/v2/token', ['body' => json_encode($data)]);
             $data_response = json_decode($response->getBody()->getContents(), true);
             Cache::put('token_key', $data_response['token_key'], now()->addMinutes(1440));
         } catch (RequestException $e) {
@@ -28,7 +29,7 @@ class ApiController extends Controller
 
 
         // < request user data
-        $client = $this->getClient();
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request('GET', '/api/v2/me');
             $data_user = json_decode($response->getBody()->getContents(), true);
@@ -42,8 +43,7 @@ class ApiController extends Controller
     }
 
     public function getAuthors() {
-        $client = $this->getClient();
-
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request('GET', '/api/v2/authors', [
                 'query' => [
@@ -71,12 +71,11 @@ class ApiController extends Controller
         $birthday = DateTime::createFromFormat('d/m/Y', $data['birthday']);
         $data['birthday'] = $birthday->format('Y-m-d');
 
-        $client = $this->getClient();
-
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request(
                 'POST',
-                'https://symfony-skeleton.q-tests.com/api/v2/authors',
+                '/api/v2/authors',
                 ['body' => json_encode($data)]
             );
         } catch (RequestException $e) {
@@ -93,7 +92,7 @@ class ApiController extends Controller
             return redirect()->route('authors')->withFail(__('You can\'t delete author that has books.'));
         }
         else {
-            $client = $this->getClient();
+            $client = ApiClientHelper::get();
             try {
                 $response = $client->delete('/api/v2/authors/'.$author);
             } catch (RequestException $e) {
@@ -111,7 +110,7 @@ class ApiController extends Controller
     }
 
     public function bookCreate() {
-        $client = $this->getClient();
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request('GET', '/api/v2/authors', [
                 'query' => [
@@ -137,12 +136,11 @@ class ApiController extends Controller
         $data['release_date'] = $release_date->format('Y-m-d');
         $data['number_of_pages'] = (int)$data['number_of_pages'];
 
-        $client = $this->getClient();
-
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request(
                 'POST',
-                'https://symfony-skeleton.q-tests.com/api/v2/books',
+                '/api/v2/books',
                 ['body' => json_encode($data)]
             );
         } catch (RequestException $e) {
@@ -155,7 +153,7 @@ class ApiController extends Controller
     public function bookDestroy(Request $request, $book) {
         $data = $request->all();
 
-        $client = $this->getClient();
+        $client = ApiClientHelper::get();
         try {
             $response = $client->delete('/api/v2/books/'.$book);
         } catch (RequestException $e) {
@@ -166,8 +164,7 @@ class ApiController extends Controller
     }
 
     public function getAuthorInfo($author_id) {
-        $client = $this->getClient();
-
+        $client = ApiClientHelper::get();
         try {
             $response = $client->request('GET', '/api/v2/authors/'.$author_id);
             $response_data = json_decode($response->getBody()->getContents(), true);
@@ -178,19 +175,4 @@ class ApiController extends Controller
         return $response_data;
     }
 
-    private function getClient() {
-        $token = Cache::get('token_key');
-
-        $client = new Client([
-            'headers' => [
-                'Authorization' => $token,
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json'
-            ],
-            'base_uri' => 'https://symfony-skeleton.q-tests.com/',
-            'timeout'  => 2.0,
-        ]);
-
-        return $client;
-    }
 }
