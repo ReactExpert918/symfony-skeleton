@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 echo 'start  .........'
 
+echo copy env
+cp .env.example .env
+
 echo 'npm install'
 npm install
 
